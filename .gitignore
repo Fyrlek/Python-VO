@@ -1,0 +1,8 @@
+# Ignore Python virtual environment
+.venv/
+
+# Ignore image folder
+test_imgs/
+
+# Ignore results folder
+results/
