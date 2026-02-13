@@ -27,8 +27,6 @@ class TrajPlotter(object):
         pass
 
     def update(self, est_xyz, gt_xyz):
-        est_xyz = np.array(est_xyz).flatten()
-        gt_xyz = np.array(gt_xyz).flatten()
         x, z = est_xyz[0], est_xyz[2]
         gt_x, gt_z = gt_xyz[0], gt_xyz[2]
 
