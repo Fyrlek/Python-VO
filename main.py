@@ -23,7 +23,7 @@ def keypoints_plot(img, vo):
 class TrajPlotter(object):
     def __init__(self):
         self.errors = []
-        self.traj = np.zeros((600, 600, 3), dtype=np.uint8)
+        self.traj = np.zeros((700, 700, 3), dtype=np.uint8)
         pass
 
     def update(self, est_xyz, gt_xyz):
@@ -45,10 +45,10 @@ class TrajPlotter(object):
 
         # === drawer ==================================
         # each point
-        draw_x = int(x) + 290
-        draw_y = int(z) + 90
-        true_x = int(gt_x) + 290
-        true_y = int(gt_z) + 90
+        draw_x = int(x) + 300
+        draw_y = int(z) + 300
+        true_x = int(gt_x) + 300
+        true_y = int(gt_z) + 300
 
         # draw trajectory
         cv2.circle(self.traj, (draw_x, draw_y), 1, (0, 255, 0), 1)

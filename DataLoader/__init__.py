@@ -1,7 +1,7 @@
 from .KITTILoader import KITTILoader
 from .SequenceImageLoader import SequenceImageLoader
 from .TUMRGBLoader import TUMRGBLoader
-
+from .DroneImageLoader import DroneImageLoader
 
 def create_dataloader(conf):
     try:
