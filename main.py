@@ -27,8 +27,12 @@ class TrajPlotter(object):
         pass
 
     def update(self, est_xyz, gt_xyz):
-        x, z = est_xyz[0], est_xyz[2]
-        gt_x, gt_z = gt_xyz[0], gt_xyz[2]
+        # 2D estimation coordinates
+        x = est_xyz[0, 0]
+        z = est_xyz[2, 0]
+        # 2D ground truth coordinates
+        gt_x = gt_xyz[0]
+        gt_z = gt_xyz[2]
 
         est = np.array([x, z]).reshape(2)
         gt = np.array([gt_x, gt_z]).reshape(2)
@@ -41,8 +45,10 @@ class TrajPlotter(object):
 
         # === drawer ==================================
         # each point
-        draw_x, draw_y = int(x) + 290, int(z) + 90
-        true_x, true_y = int(gt_x) + 290, int(gt_z) + 90
+        draw_x = int(x) + 290
+        draw_y = int(z) + 90
+        true_x = int(gt_x) + 290
+        true_y = int(gt_z) + 90
 
         # draw trajectory
         cv2.circle(self.traj, (draw_x, draw_y), 1, (0, 255, 0), 1)
