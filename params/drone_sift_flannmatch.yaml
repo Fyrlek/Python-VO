@@ -2,7 +2,7 @@ dataset:
   name: DroneImageLoader
 #  root_path: /mnt/dataset_hdd/KITTI/odometry
   root_path: test_imgs
-  sequence: '00'
+  sequence: '01'
   start: 0
 
 detector:

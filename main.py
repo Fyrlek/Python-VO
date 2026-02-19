@@ -83,20 +83,21 @@ def run(args):
 
     vo = VisualOdometry(detector, matcher, loader.cam)
     for i, img in enumerate(loader):
-        gt_pose = loader.get_cur_pose()
-        R, t = vo.update(img, absscale.update(gt_pose))
+        if i % 10 == 0:
+            gt_pose = loader.get_cur_pose()
+            R, t = vo.update(img, absscale.update(gt_pose))
 
-        # === log writer ==============================
-        print(i, t[0, 0], t[1, 0], t[2, 0], gt_pose[0, 3], gt_pose[1, 3], gt_pose[2, 3], file=log_fopen)
+            # === log writer ==============================
+            print(i, t[0, 0], t[1, 0], t[2, 0], gt_pose[0, 3], gt_pose[1, 3], gt_pose[2, 3], file=log_fopen)
 
-        # === drawer ==================================
-        img1 = keypoints_plot(img, vo)
-        img2 = traj_plotter.update(t, gt_pose[:, 3])
+            # === drawer ==================================
+            img1 = keypoints_plot(img, vo)
+            img2 = traj_plotter.update(t, gt_pose[:, 3])
 
-        cv2.imshow("keypoints", img1)
-        cv2.imshow("trajectory", img2)
-        if cv2.waitKey(10) == 27:
-            break
+            cv2.imshow("keypoints", img1)
+            cv2.imshow("trajectory", img2)
+            if cv2.waitKey(10) == 27:
+                break
 
     cv2.imwrite("results/" + fname + '.png', img2)
 
