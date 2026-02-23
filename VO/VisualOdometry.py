@@ -48,7 +48,7 @@ class VisualOdometry(object):
             self.kptdescs["cur"] = kptdesc
 
             # start point
-            self.cur_R = np.identity(3)
+            self.cur_R = np.eye(3)
             self.cur_t = np.zeros((3, 1))
         else:
             # update keypoints and descriptors

@@ -74,23 +74,9 @@ class DroneImageLoader(object):
             pose = np.zeros((3, 4), dtype=np.float64)
             pose[:3, :3] = np.eye(3)   # no rotation (orientation not available in SRT)
             pose[0, 3] = e   # x = East
-            pose[1, 3] = 0.0 # keep y zero (or could use -u if desired)
+            pose[1, 3] = -u # keep y zero (or could use -u if desired)
             pose[2, 3] = n   # z = North
             self.gt_poses.append(pose)
-
-        # read ground truth pose KITTI format
-        # self.pose_path = self.config["root_path"] + "/poses/" + self.config["sequence"] + ".txt"
-        # self.gt_poses = []
-        # with open(self.pose_path) as f:
-        #     lines = f.readlines()
-        #     for line in lines:
-        #         ss = line.strip().split()
-        #         pose = np.zeros((1, len(ss)))
-        #         for i in range(len(ss)):
-        #             pose[0, i] = float(ss[i])
-
-        #         pose.resize([3, 4])
-        #         self.gt_poses.append(pose)
         
         #write gt poses to txt file
         with open(self.config["root_path"] + "/poses/" + self.config["sequence"] + "_gt.txt", "w", encoding="utf-8") as f:

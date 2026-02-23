@@ -3,8 +3,8 @@ import os
 from pathlib import Path
 
 # --- Configuration ---
-VIDEO_PATH = "test_imgs/video/DJI_29_D.MP4"
-OUTPUT_DIR = "test_imgs/sequences/01"
+VIDEO_PATH = "test_imgs/video/DJI_31_D.MP4"
+OUTPUT_DIR = "test_imgs/sequences/02"
 FRAME_INTERVAL_SECONDS = 1
 
 def extract_frames():
