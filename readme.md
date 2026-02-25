@@ -50,6 +50,19 @@ For feature matchers, we tested the KNN and FLANN mathers implemented in OpenCV,
 1. edit dataset path in `params/*.yaml`;
 2. run `python main.py --config params/*.yaml` in terminal.
     
+You can also adjust the ground-truth orientation for datasets that lack a heading (e.g. drone sequences) by adding either `gt_yaw_deg` or a full 3×3 matrix under the `dataset` section of the YAML.  The loader will post‑rotate every pose accordingly.
+
+For example, rotate the drone GT by 90° yaw:
+```yaml
+# params/drone_rot90.yaml
+dataset:
+  name: DroneImageLoader
+  root_path: test_imgs
+  sequence: '01'
+  start: 0
+  gt_yaw_deg: 90          # new parameter
+```
+
 For example, to evaluate the SuperPoint with SuperGlue, run:
 
 ```bash

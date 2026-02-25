@@ -69,13 +69,34 @@ class DroneImageLoader(object):
 
         # populate gt poses using ENU. For 2D trajectory plotting the code expects
         # pose[0] -> x (east) and pose[2] -> z (north), so we place E in index 0 and N in index 2.
+        # optionally rotate the gt coordinate frame about the origin using a rotation matrix
+        # supplied in the config (e.g. to correct an unknown yaw).
         self.gt_poses = []
+        # pre‑compute rotation matrix if provided
+        rot_mat = np.eye(3)
+        if "gt_rot" in self.config:
+            r = np.array(self.config["gt_rot"])  # expect 3x3 list
+            assert r.shape == (3, 3), "gt_rot must be a 3x3 matrix"
+            rot_mat = r.astype(np.float64)
+        elif "gt_yaw_deg" in self.config:
+            # yaw angle in degrees. The loader maps ENU -> pose as
+            # x=E (index 0), y=vertical (index 1), z=N (index 2),
+            # so the up axis is the pose y axis. Rotate about y.
+            yaw = np.deg2rad(self.config["gt_yaw_deg"])
+            c, s = np.cos(yaw), np.sin(yaw)
+            # rotation about Y (up) axis
+            rot_mat = np.array([[ c, 0.0,  s],
+                                [0.0,1.0, 0.0],
+                                [-s, 0.0,  c]])
+
         for e, n, u in enu:
             pose = np.zeros((3, 4), dtype=np.float64)
-            pose[:3, :3] = np.eye(3)   # no rotation (orientation not available in SRT)
+            pose[:3, :3] = rot_mat  # apply optional rotation
             pose[0, 3] = e   # x = East
             pose[1, 3] = -u # keep y zero (or could use -u if desired)
             pose[2, 3] = n   # z = North
+            # rotate translation as well (apply rotation to the vector)
+            pose[:3, 3] = rot_mat.dot(pose[:3, 3])
             self.gt_poses.append(pose)
         
         #write gt poses to txt file

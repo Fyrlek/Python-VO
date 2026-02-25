@@ -83,7 +83,7 @@ def run(args):
 
     vo = VisualOdometry(detector, matcher, loader.cam)
     for i, img in enumerate(loader):
-        if i % 20 == 0:
+        if i % 10 == 0:
             gt_pose = loader.get_cur_pose()
             R, t = vo.update(img, absscale.update(gt_pose))
             # R, t = vo.update(img, 1.0)

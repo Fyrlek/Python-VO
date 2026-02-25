@@ -65,10 +65,10 @@ class VisualOdometry(object):
                                             focal=self.focal, pp=self.pp)
 
             # get absolute pose based on absolute_scale
-            if (absolute_scale > 0.1):
+            if (absolute_scale > 0):
                 self.cur_t = self.cur_t + absolute_scale * self.cur_R.dot(t)
                 self.cur_R = R.dot(self.cur_R)
-
+            
         self.kptdescs["ref"] = self.kptdescs["cur"]
 
         self.index += 1

@@ -4,3 +4,5 @@
 # Ignore image folder
 test_imgs/
 
+# Ignore results folder
+results/
