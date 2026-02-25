@@ -6,3 +6,4 @@ test_imgs/
 
 # Ignore results folder
 results/
+/results
