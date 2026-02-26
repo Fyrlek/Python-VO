@@ -5,6 +5,7 @@ import cv2
 import argparse
 import yaml
 import logging
+import open3d as o3d
 
 from utils.tools import plot_keypoints
 
@@ -23,44 +24,107 @@ def keypoints_plot(img, vo):
 class TrajPlotter(object):
     def __init__(self):
         self.errors = []
-        self.traj = np.zeros((700, 700, 3), dtype=np.uint8)
-        pass
+        # store 3D points
+        self.est_points = []
+        self.gt_points = []
+        
+        # Open3D visualizer
+        self.vis = o3d.visualization.Visualizer()
+        self.vis.create_window(window_name="3D Trajectory", width=600, height=600)
+        
+        # line sets for trajectories
+        self.est_lineset = None
+        self.gt_lineset = None
+        
+        # point clouds for endpoints
+        self.est_pcd = o3d.geometry.PointCloud()
+        self.gt_pcd = o3d.geometry.PointCloud()
 
     def update(self, est_xyz, gt_xyz):
-        # 2D estimation coordinates
-        x = est_xyz[0, 0]
-        z = est_xyz[2, 0]
-        # 2D ground truth coordinates
-        gt_x = gt_xyz[0]
-        gt_z = gt_xyz[2]
+        # convert inputs to flat 3D vectors
+        est = np.asarray(est_xyz).reshape(3,)
+        gt = np.asarray(gt_xyz).reshape(3,)
 
-        est = np.array([x, z]).reshape(2)
-        gt = np.array([gt_x, gt_z]).reshape(2)
+        # append points
+        self.est_points.append(est)
+        self.gt_points.append(gt)
 
-        error = np.linalg.norm(est - gt)
+        # compute 3D error
+        err = float(np.linalg.norm(est - gt))
+        self.errors.append(err)
+        avg_error = float(np.mean(np.array(self.errors)))
 
-        self.errors.append(error)
+        # clear previous geometries
+        self.vis.clear_geometries()
 
-        avg_error = np.mean(np.array(self.errors))
+        # build estimated trajectory line
+        est_array = np.array(self.est_points)
+        if est_array.shape[0] > 1:
+            lines_est = [[i, i + 1] for i in range(est_array.shape[0] - 1)]
+            self.est_lineset = o3d.geometry.LineSet()
+            self.est_lineset.points = o3d.utility.Vector3dVector(est_array)
+            self.est_lineset.lines = o3d.utility.Vector2iVector(lines_est)
+            self.est_lineset.colors = o3d.utility.Vector3dVector([[0, 1, 0] for _ in lines_est])  # green
+            self.vis.add_geometry(self.est_lineset)
+        elif est_array.shape[0] > 0:
+            self.est_pcd.points = o3d.utility.Vector3dVector(est_array)
+            self.est_pcd.paint_uniform_color([0, 1, 0])
+            self.vis.add_geometry(self.est_pcd)
 
-        # === drawer ==================================
-        # each point
-        draw_x = int(x) + 300
-        draw_y = int(z) + 300
-        true_x = int(gt_x) + 300
-        true_y = int(gt_z) + 300
+        # build ground-truth trajectory line
+        gt_array = np.array(self.gt_points)
+        if gt_array.shape[0] > 1:
+            lines_gt = [[i, i + 1] for i in range(gt_array.shape[0] - 1)]
+            self.gt_lineset = o3d.geometry.LineSet()
+            self.gt_lineset.points = o3d.utility.Vector3dVector(gt_array)
+            self.gt_lineset.lines = o3d.utility.Vector2iVector(lines_gt)
+            self.gt_lineset.colors = o3d.utility.Vector3dVector([[1, 0, 0] for _ in lines_gt])  # red
+            self.vis.add_geometry(self.gt_lineset)
+        elif gt_array.shape[0] > 0:
+            self.gt_pcd.points = o3d.utility.Vector3dVector(gt_array)
+            self.gt_pcd.paint_uniform_color([1, 0, 0])
+            self.vis.add_geometry(self.gt_pcd)
 
-        # draw trajectory
-        cv2.circle(self.traj, (draw_x, draw_y), 1, (0, 255, 0), 1)
-        cv2.circle(self.traj, (true_x, true_y), 1, (0, 0, 255), 2)
-        cv2.rectangle(self.traj, (10, 20), (600, 80), (0, 0, 0), -1)
+        # add coordinate frame at origin; scale according to scene extents
+        if len(self.est_points) + len(self.gt_points) > 0:
+            pts = np.vstack(self.est_points + self.gt_points)
+            span = np.max(pts, axis=0) - np.min(pts, axis=0)
+            size = float(np.linalg.norm(span)) * 0.1  # axis length % of diagonal
+            size = max(size, 1.0)  # minimum
+        else:
+            size = 1.0
+        mesh = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size, origin=[0, 0, 0])
+        self.vis.add_geometry(mesh)
 
-        # draw text
-        text = "[AvgError] %2.4fm" % (avg_error)
-        cv2.putText(self.traj, text, (20, 40),
-                    cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1, 8)
+        # 3D label for average error (if available)
+        try:
+            # place label slightly above origin
+            self.vis.add_3d_label(np.array([0.0, 0.0, 0.5]), f"AvgErr: {avg_error:.4f} m")
+        except Exception:
+            # older Open3D may not support labels; ignore
+            pass
 
-        return self.traj
+        # update view
+        self.vis.poll_events()
+        self.vis.update_renderer()
+        
+        # capture screen as image for cv2.imshow
+        img = self.vis.capture_screen_float_buffer(do_render=True)
+        img_np = (np.asarray(img) * 255).astype(np.uint8)
+        img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+        
+        # add error text overlay
+        cv2.putText(img_bgr, f"AvgError: {avg_error:.4f} m", (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+        return img_bgr
+
+    def finalize(self):
+        """Keep the visualizer window open for interactive inspection.
+        Call this once after all updates are done (e.g. at end of run())."""
+        # start interaction loop - this blocks until the window is closed
+        self.vis.run()
+        self.vis.destroy_window()
 
 
 def run(args):
@@ -83,7 +147,7 @@ def run(args):
 
     vo = VisualOdometry(detector, matcher, loader.cam)
     for i, img in enumerate(loader):
-        if i % 10 == 0:
+        if i % 30 == 0:
             gt_pose = loader.get_cur_pose()
             R, t = vo.update(img, absscale.update(gt_pose))
             # R, t = vo.update(img, 1.0)
@@ -101,6 +165,9 @@ def run(args):
                 break
 
     cv2.imwrite("results/" + fname + '.png', img2)
+
+    # keep 3D plot interactive after processing
+    traj_plotter.finalize()
 
 
 if __name__ == "__main__":

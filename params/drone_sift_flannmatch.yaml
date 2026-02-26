@@ -2,7 +2,7 @@ dataset:
   name: DroneImageLoader
 #  root_path: /mnt/dataset_hdd/KITTI/odometry
   root_path: test_imgs
-  sequence: '01'
+  sequence: '29'
   start: 0
   gt_yaw_deg: 140
 

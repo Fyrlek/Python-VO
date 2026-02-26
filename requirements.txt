@@ -1,6 +1,7 @@
 numpy>=1.24.0
 torch
 matplotlib
+open3d
 PyYAML
 tqdm
 opencv-python
