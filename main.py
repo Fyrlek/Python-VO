@@ -8,7 +8,6 @@ import logging
 import open3d as o3d
 
 from utils.tools import plot_keypoints
-
 from DataLoader import create_dataloader
 from Detectors import create_detector
 from Matchers import create_matcher
@@ -29,8 +28,17 @@ class TrajPlotter(object):
         self.gt_points = []
         
         # Open3D visualizer
-        self.vis = o3d.visualization.Visualizer()
+        self.vis = o3d.visualization.VisualizerWithKeyCallback()
         self.vis.create_window(window_name="3D Trajectory", width=600, height=600)
+        # state for orthographic toggle and saved zoom
+        self._is_orthographic = False
+        self._orthographic_sim = False
+        self._saved_zoom = None
+
+        # Register callbacks
+        self.vis.register_key_callback(ord("1"), lambda vis: self._snap_axis("x"))
+        self.vis.register_key_callback(ord("2"), lambda vis: self._snap_axis("y"))
+        self.vis.register_key_callback(ord("3"), lambda vis: self._snap_axis("z"))
         
         # line sets for trajectories
         self.est_lineset = None
@@ -39,6 +47,32 @@ class TrajPlotter(object):
         # point clouds for endpoints
         self.est_pcd = o3d.geometry.PointCloud()
         self.gt_pcd = o3d.geometry.PointCloud()
+
+    def _snap_axis(self, axis):
+        vc = self.vis.get_view_control()
+        # compute scene center
+        if len(self.est_points) + len(self.gt_points) > 0:
+            pts = np.vstack(self.est_points + self.gt_points)
+            center = pts.mean(axis=0)
+        else:
+            center = np.array([0.0, 0.0, 0.0])
+
+        if axis == "x":
+            front = [1, 0, 0]
+            up = [0, 0, 1]
+        elif axis == "y":
+            front = [0, 1, 0]
+            up = [0, 0, 1]
+        else:
+            front = [0, 0, 1]
+            up = [0, 1, 0]
+
+        vc.set_front(front)
+        vc.set_up(up)
+        vc.set_lookat(center)
+        vc.set_zoom(0.5)
+
+        return False
 
     def update(self, est_xyz, gt_xyz):
         # convert inputs to flat 3D vectors
@@ -89,7 +123,7 @@ class TrajPlotter(object):
         if len(self.est_points) + len(self.gt_points) > 0:
             pts = np.vstack(self.est_points + self.gt_points)
             span = np.max(pts, axis=0) - np.min(pts, axis=0)
-            size = float(np.linalg.norm(span)) * 0.1  # axis length % of diagonal
+            size = float(np.linalg.norm(span)) * 0.05  # axis length % of diagonal
             size = max(size, 1.0)  # minimum
         else:
             size = 1.0
@@ -100,6 +134,7 @@ class TrajPlotter(object):
         try:
             # place label slightly above origin
             self.vis.add_3d_label(np.array([0.0, 0.0, 0.5]), f"AvgErr: {avg_error:.4f} m")
+            self.vis.add_2d_label((10, 30), f"AvgError: {avg_error:.4f} m")
         except Exception:
             # older Open3D may not support labels; ignore
             pass
@@ -114,8 +149,7 @@ class TrajPlotter(object):
         img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
         
         # add error text overlay
-        cv2.putText(img_bgr, f"AvgError: {avg_error:.4f} m", (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        cv2.putText(img_bgr, f"AvgError: {avg_error:.4f} m", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
         return img_bgr
 
@@ -147,7 +181,7 @@ def run(args):
 
     vo = VisualOdometry(detector, matcher, loader.cam)
     for i, img in enumerate(loader):
-        if i % 30 == 0:
+        if i % 50 == 0:
             gt_pose = loader.get_cur_pose()
             R, t = vo.update(img, absscale.update(gt_pose))
             # R, t = vo.update(img, 1.0)

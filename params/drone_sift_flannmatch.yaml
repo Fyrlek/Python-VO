@@ -4,7 +4,10 @@ dataset:
   root_path: test_imgs
   sequence: '29'
   start: 0
-  gt_yaw_deg: 140
+  #gt_yaw_deg: 140
+  gt_rot: [[ -0.7660444,  0.0000000,  0.6427876],
+   [ 0.2198463,  0.9396926,  0.2620026],
+   [-0.6040228,  0.3420202, -0.7198463] ]
 
 detector:
   name: HandcraftDetector
