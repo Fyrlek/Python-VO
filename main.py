@@ -119,7 +119,7 @@ class TrajPlotter(object):
             self.gt_pcd.paint_uniform_color([1, 0, 0])
             self.vis.add_geometry(self.gt_pcd)
 
-        # add coordinate frame at origin; scale according to scene extents
+        # Add coordinate frame at origin; scale according to scene extents
         if len(self.est_points) + len(self.gt_points) > 0:
             pts = np.vstack(self.est_points + self.gt_points)
             span = np.max(pts, axis=0) - np.min(pts, axis=0)
@@ -130,25 +130,20 @@ class TrajPlotter(object):
         mesh = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size, origin=[0, 0, 0])
         self.vis.add_geometry(mesh)
 
-        # 3D label for average error (if available)
-        try:
-            # place label slightly above origin
-            self.vis.add_3d_label(np.array([0.0, 0.0, 0.5]), f"AvgErr: {avg_error:.4f} m")
-            self.vis.add_2d_label((10, 30), f"AvgError: {avg_error:.4f} m")
-        except Exception:
-            # older Open3D may not support labels; ignore
-            pass
-
-        # update view
+        # Update view
         self.vis.poll_events()
         self.vis.update_renderer()
         
-        # capture screen as image for cv2.imshow
+        # Capture screen as image for cv2.imshow
         img = self.vis.capture_screen_float_buffer(do_render=True)
         img_np = (np.asarray(img) * 255).astype(np.uint8)
         img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+
+        # Add background rectangle for text
+        (text_w, text_h), _ = cv2.getTextSize(f"AvgError: {avg_error:.4f} m", cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+        cv2.rectangle(img_bgr, (5, 5), (15 + text_w, 25 + text_h), (0, 0, 0), -1)
         
-        # add error text overlay
+        # Add error text overlay
         cv2.putText(img_bgr, f"AvgError: {avg_error:.4f} m", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
         return img_bgr
@@ -181,7 +176,7 @@ def run(args):
 
     vo = VisualOdometry(detector, matcher, loader.cam)
     for i, img in enumerate(loader):
-        if i % 50 == 0:
+        if i % 10 == 0:
             gt_pose = loader.get_cur_pose()
             R, t = vo.update(img, absscale.update(gt_pose))
             # R, t = vo.update(img, 1.0)
