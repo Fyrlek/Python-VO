@@ -176,12 +176,8 @@ def run(args):
     fname = args.config.split('/')[-1].split('.')[0]
     log_fopen = open("results/" + fname + ".txt", mode='a')
 
-    start_R = [[ -0.7660444,  0.0000000, -0.6427876],
-                [ 0.0000000,  1.0000000,  0.0000000],
-                [ 0.6427876,  0.0000000, -0.7660444 ]]
-    # start_R = np.eye(3)
-    
-    frames_step = 50
+    start_R = np.eye(3)
+    frames_step = 30
     pre_frames = 10
 
     absolute_scales = []
@@ -192,15 +188,23 @@ def run(args):
 
     vo = VisualOdometry(detector, matcher, loader.cam)
 
-    # Run initial frames to compute average rotation error and bias
+    # Run initial frames to accumulate trajectory for alignment
     for i, img in enumerate(islice(loader, pre_frames*frames_step)):
         if i % frames_step == 0:
             gt_pose = loader.get_cur_pose()
             absolute_scale = scaleComp.update(gt_pose)
             absolute_scales.append(absolute_scale)
-            R, t = vo.pre_update(img, absolute_scale, start_R)
-            # R_bias = vo.find_alignment_rotation(R, gt_pose[:3, :3])
-            print(f"Frame {i}")
+            R, t = vo.pre_update(img, absolute_scale, start_R, gt_pose)
+
+            # Plot pre-frames with R_bias=eye (no correction yet, just show raw)
+            img1 = keypoints_plot(img, vo)
+            img2 = traj_plotter.update(t, gt_pose[:, 3])
+            cv2.imshow("keypoints", img1)
+            cv2.imshow("trajectory", img2)
+            cv2.waitKey(1)
+
+    # Compute alignment rotation from the warmup trajectory
+    R_bias = vo.compute_alignment_rotation()
 
     # Run VO using computed bias
     for i, img in enumerate(loader):
@@ -210,7 +214,7 @@ def run(args):
 
             average_scale = np.mean(absolute_scales) if absolute_scales else 1.0
             R, t = vo.update(img, absolute_scales[-1], start_R, R_bias) # last scale
-            # R, t = vo.update(img, average_scale, start_R) # average scale
+            # R, t = vo.update(img, average_scale, start_R, R_bias) # average scale
 
             # === log writer ==============================
             print(i, t[0, 0], t[1, 0], t[2, 0], gt_pose[0, 3], gt_pose[1, 3], gt_pose[2, 3], file=log_fopen)
