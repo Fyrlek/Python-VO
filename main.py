@@ -206,15 +206,24 @@ def run(args):
     # Compute alignment rotation from the warmup trajectory
     R_bias = vo.compute_alignment_rotation()
 
+    # Compute scale acceleration
+    scale_acceleration = (absolute_scales[-1] - absolute_scales[0]) / (pre_frames - 1) if pre_frames > 1 else 0
+    last_scale = absolute_scales[-1] if absolute_scales else 1.0
+
+    print(f"Computed R_bias:\n{R_bias}")
+    print(f"Average scale over pre-frames: {np.mean(absolute_scales)}")
+    print(f"Scale acceleration: {scale_acceleration}")
+
     # Run VO using computed bias
     for i, img in enumerate(loader):
         if i % frames_step == 0:
             gt_pose = loader.get_cur_pose()
-            
 
             average_scale = np.mean(absolute_scales) if absolute_scales else 1.0
-            R, t = vo.update(img, absolute_scales[-1], start_R, R_bias) # last scale
-            # R, t = vo.update(img, average_scale, start_R, R_bias) # average scale
+            current_scale = last_scale + (scale_acceleration / 2)
+            last_scale = current_scale
+
+            R, t = vo.update(img, current_scale, start_R, R_bias)
 
             # === log writer ==============================
             print(i, t[0, 0], t[1, 0], t[2, 0], gt_pose[0, 3], gt_pose[1, 3], gt_pose[2, 3], file=log_fopen)
@@ -227,7 +236,8 @@ def run(args):
             cv2.imshow("trajectory", img2)
             if cv2.waitKey(10) == 27:
                 break
-
+    
+    cv2.imwrite("results/" + fname + 'keypoints.png', img1)
     cv2.imwrite("results/" + fname + '.png', img2)
 
     # keep 3D plot interactive after processing
